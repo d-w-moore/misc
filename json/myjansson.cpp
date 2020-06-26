@@ -30,10 +30,11 @@ const char* Json_string_value_s(Json_t *j,std::string & dummy) {
 define Json_string_value(j) (
 	{
 		std::string dummy_string;
-		Json_string_value_s( (j), dummy_string;
+		Json_string_value_s( (j), dummy_string);
 		std::strdup ( dummy_string.c_str() );
 	}
 )
+
 Json_t* Json_string(const char *s) {
   auto sg =  new Json_t ;
   *sg = s;
