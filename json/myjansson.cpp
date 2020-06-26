@@ -22,7 +22,7 @@ const char* Json_dumps(Json_t *j)
   return std::strdup (s.c_str());
 }
 
-const char * Json_string_value_support  		\
+#define Json_string_value_support   		  \
   std::vector<std::string> dummy_vec;			\
   auto Json_string_value = [&dummy_vec] (Json_t* j) { 	\
     d.emplace_back( j );				\
