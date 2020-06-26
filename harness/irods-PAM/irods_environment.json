@@ -1,0 +1,15 @@
+{
+    "irods_host": "ce366aa4c43a",
+    "irods_zone_name": "tempZone",
+    "irods_port": 1247,
+    "irods_user_name": "alissa",
+    "irods_authentication_scheme": "PAM",
+    "irods_client_server_negotiation": "request_server_negotiation",
+    "irods_client_server_policy": "CS_NEG_REQUIRE",
+    "irods_ssl_ca_certificate_file": "/etc/irods/ssl/irods.crt",
+    "irods_ssl_verify_server": "cert",
+    "irods_encryption_key_size": 16,
+    "irods_encryption_salt_size": 8,
+    "irods_encryption_num_hash_rounds": 16,
+    "irods_encryption_algorithm": "AES-256-CBC"
+}
