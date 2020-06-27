@@ -3,7 +3,7 @@
 from __future__ import print_function
 import os, ssl, sys, getopt, socket
 from shutil import copytree, rmtree
-from os.path import exists, isdir, isfile, islink, expanduser, abspath
+from os.path import exists, isdir, isfile, islink, expanduser, abspath, dirname,join
 from irods.session import iRODSSession
 
 # ________ manual tests __________
@@ -39,7 +39,7 @@ from irods.session import iRODSSession
 #  1. needed: handle DONT_CARE on client side
 
 
-SYMBOLIC_LINK = False
+ENV_DIR = None
 VERBOSE = False
 EXIT = False
 pw_opt = ''
@@ -70,38 +70,40 @@ def remove_dot_irods ( path_ = None):
 
   if exists( path_ ): raise CouldNotDeleteError
 
+SCRIPTDIR = dirname(sys.argv[0])
+
 
 def create_dircopy ( auth ):
 
   COPY_TO_NAME = expanduser(  '~/.irods')
-  COPY_FM_NAME = expanduser(  '~/irods-' + auth.upper() )
+  COPY_FM_NAME = abspath(join( SCRIPTDIR,'irods-{}'.format( auth.upper())))
   remove_dot_irods(COPY_TO_NAME)
-  copytree(COPY_FM_NAME,COPY_TO_NAME)
+  if ENV_DIR:
+    copytree(COPY_FM_NAME,COPY_TO_NAME)
 
     
 def create_symlink ( auth ):
 
   LINK_NAME = expanduser(  '~/.irods')
-  DST_NAME = expanduser(  '~/irods-' + auth.upper())
+  DST_NAME = abspath(join( SCRIPTDIR,'irods-{}'.format( auth.upper())))
 
-  if exists(LINK_NAME):
+  if exists(LINK_NAME) :
     remove_dot_irods(LINK_NAME)
 
-  os.symlink (DST_NAME,LINK_NAME)
+  if ENV_DIR:
+    os.symlink (DST_NAME,LINK_NAME)
 
-  if VERBOSE:
-    linked_ = os.readlink (LINK_NAME)
-    print( "DEBUG -> {LINK_NAME} pointing at  {linked_}".format(**locals()) , file = sys.stderr)
+    if VERBOSE:
+      linked_ = os.readlink (LINK_NAME)
+      print( "DEBUG -> {LINK_NAME} pointing at  {linked_}".format(**locals()) , file = sys.stderr)
 
 #############################################
 
-
 try:
-  opt,arg = getopt.getopt(sys.argv[1:], 'h:s:ealxv''pi''P:', ['password='])
+  opt,arg = getopt.getopt(sys.argv[1:], 'h:s:e:alxv''pi''P:', ['password='])
 except getopt.GetoptError as e:
   print ( """\n\
   Usage: {} [-lvxipea] [ -s <crtpath> ] [ --password <pwd> ]  ...options
-      		-l	make .irods a symbolic link -- default is auth dir copy (.irods/)
       		-x	exit after symlinking/copying auth dir
       		-v	verbose
       		-s	add SSL opts to cmd line
@@ -110,7 +112,7 @@ except getopt.GetoptError as e:
 
         options (___Auth category___):	-i	AUTH with irods     
 					-p	AUTH with pam
-     	options (___Call style___):	-e	load environment file
+     	options (___Call style___):	-e <L|D>	load environment file from (Link/Directory)
 					-a	pass args for Authentication
     \n""".format(sys.argv[0])
   )
@@ -130,11 +132,13 @@ for key,val in opt:
   if  key == '-p' : AUTH = 'pam'
   if  key == '-i' : AUTH = 'irods'
   if  key == '-a' : METHOD = 'args'
-  if  key == '-e' : METHOD = 'env'
+  if  key == '-e' : METHOD = 'env' ;\
+                    ENV_DIR = val.lower()
   if  key == '-s' : SSL_cert = val
   if  key == '-v' : VERBOSE = True
   if  key == '-x' : EXIT = True
-  if  key == '-l' : SYMBOLIC_LINK = True
+  if  key == '-d' : ENV_DIR = 'copy'
+  if  key == '-l' : ENV_DIR = 'link'
   if  key == '-h' : Host = val
 
 if SSL_cert and ('/' not in SSL_cert): SSL_cert ='/etc/irods/ssl/irods.crt'
@@ -153,7 +157,8 @@ SSL_Options = {
 
 def main():
 
-  if AUTH is not None: (create_symlink if SYMBOLIC_LINK else create_dircopy) (AUTH)
+  if AUTH is not None and ENV_DIR:
+    (create_symlink if ENV_DIR == 'l' else create_dircopy) (AUTH)
   if EXIT: return 0
 
   settings = {}
