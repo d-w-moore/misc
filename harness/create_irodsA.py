@@ -15,5 +15,5 @@ def create_auth_file(pw):
   return (p.returncode if p else None)
 
 if __name__ == '__main__':
-  s = getpass.getpass('->')
+  s = getpass.getpass('enter (iRODS/PAM) password ->')
   print create_auth_file (s)
