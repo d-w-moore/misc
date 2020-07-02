@@ -1,10 +1,25 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import os, ssl, sys, getopt, socket
+import os, ssl, sys, getopt, socket, subprocess, tempfile
 from shutil import copytree, rmtree
-from os.path import exists, isdir, isfile, islink, expanduser, abspath, dirname,join
+from os.path import ( exists, isdir, isfile, islink, expanduser, dirname,
+                      abspath, realpath, join as path_join )
 from irods.session import iRODSSession
+from irods.collection import iRODSCollection
+
+def create_auth_file( pw ):
+  p = None
+  with tempfile.SpooledTemporaryFile() as f:
+    f.write(pw + '\n')
+    f.seek(0)
+    f.read()
+    f.seek(0)
+    null=open('/dev/null','w')
+    p = subprocess.Popen('iinit',stdout=null,stderr=null,stdin=f)        
+    p.communicate()
+  return (p.returncode if p else None)
+
 
 # ________ manual tests __________
 
@@ -39,75 +54,76 @@ from irods.session import iRODSSession
 #  1. needed: handle DONT_CARE on client side
 
 
+SCRIPTDIR = dirname(realpath(sys.argv[0]))
+
+ENV_DIR_PATH = expanduser( '~/.irods' )
 ENV_DIR = None
-VERBOSE = False
+ErrVerbose =  False
+OutVerbose =  1
 EXIT = False
 pw_opt = ''
+show_Exception = False
 
-class UnrecognizedFileTypeError(RuntimeError): pass
-class CouldNotDeleteError(RuntimeError): pass
+class UnrecognizedFileTypeError(RuntimeError): code = 110
+class CouldNotDeleteError(RuntimeError):       code = 111
+class CouldNotCreateError(RuntimeError):       code = 112
+class LogicError(RuntimeError):                code = 113
 
 ##############################################
 # This script deletes current .irods directory
 ##############################################
 
 def remove_dot_irods ( path_ = None):
-
   if path_ is None:
     path_ = expanduser(  '~/.irods')
   else:
     path_ = abspath( path_ )
-
   if not exists (path_):
     return
-
   if islink(path_) or isfile(path_):
     os.unlink(path_)
   elif isdir(path_):
     rmtree(path_)
   else:
     raise UnrecognizedFileTypeError
-
   if exists( path_ ): raise CouldNotDeleteError
 
-SCRIPTDIR = dirname(sys.argv[0])
-
-
 def create_dircopy ( auth ):
-
-  COPY_TO_NAME = expanduser(  '~/.irods')
-  COPY_FM_NAME = abspath(join( SCRIPTDIR,'irods-{}'.format( auth.upper())))
-  remove_dot_irods(COPY_TO_NAME)
+  COPY_TO_NAME = ENV_DIR_PATH
+  if exists(COPY_TO_NAME) : raise CouldNotDeleteError
+  COPY_FM_NAME = abspath(path_join( SCRIPTDIR,'irods-{}'.format( auth.upper())))
   if ENV_DIR:
     copytree(COPY_FM_NAME,COPY_TO_NAME)
-
+    if not exists(COPY_TO_NAME) : return False
+  return True
     
 def create_symlink ( auth ):
-
-  LINK_NAME = expanduser(  '~/.irods')
-  DST_NAME = abspath(join( SCRIPTDIR,'irods-{}'.format( auth.upper())))
-
-  if exists(LINK_NAME) :
-    remove_dot_irods(LINK_NAME)
-
+  LINK_NAME = ENV_DIR_PATH
+  if exists(LINK_NAME) : raise CouldNotDeleteError
+  DST_NAME = abspath(path_join( SCRIPTDIR,'irods-{}'.format( auth.upper())))
   if ENV_DIR:
     os.symlink (DST_NAME,LINK_NAME)
-
-    if VERBOSE:
+    if not exists(LINK_NAME) : return False
+    if ErrVerbose:
       linked_ = os.readlink (LINK_NAME)
       print( "DEBUG -> {LINK_NAME} pointing at  {linked_}".format(**locals()) , file = sys.stderr)
+  return True
 
 #############################################
 
+class Bad_Env_Dir_Opt (RuntimeError): pass
+
 try:
-  opt,arg = getopt.getopt(sys.argv[1:], 'h:s:e:alxv''pi''P:', ['password='])
+  opt,arg = getopt.getopt(sys.argv[1:], 'h:s:e:alxvV:E''pi''P:', ['password='])
 except getopt.GetoptError as e:
   print ( """\n\
-  Usage: {} [-lvxipea] [ -s <crtpath> ] [ --password <pwd> ]  ...options
+  Usage: {} [-lvxipa] [ -s <crtpath> ] [ --password <pwd> ]  ...options
       		-x	exit after symlinking/copying auth dir
-      		-v	verbose
+      		-v	stderr verbose on
+      		-V N	stdout verbose on, level N
       		-s	add SSL opts to cmd line
       		-h	hostname
+      		-E	show Exception detail
       		--password=<password>
 
         options (___Auth category___):	-i	AUTH with irods     
@@ -116,7 +132,7 @@ except getopt.GetoptError as e:
 					-a	pass args for Authentication
     \n""".format(sys.argv[0])
   )
-  sys.exit(126)
+  sys.exit(125)
 
 pw = { None: None, 
        'irods' :  'apass',
@@ -132,14 +148,16 @@ for key,val in opt:
   if  key == '-p' : AUTH = 'pam'
   if  key == '-i' : AUTH = 'irods'
   if  key == '-a' : METHOD = 'args'
-  if  key == '-e' : METHOD = 'env' ;\
-                    ENV_DIR = val.lower()
+  if  key == '-e' :
+    METHOD = 'env'
+    ENV_DIR = val.lower()
+    if 'dl'.find(ENV_DIR) < 0: raise Bad_Env_Dir_Opt ("need -e arg to be 'l' or 'd'")
   if  key == '-s' : SSL_cert = val
-  if  key == '-v' : VERBOSE = True
+  if  key == '-v' : ErrVerbose = True;
+  if  key == '-V' : OutVerbose = int(val)
   if  key == '-x' : EXIT = True
-  if  key == '-d' : ENV_DIR = 'copy'
-  if  key == '-l' : ENV_DIR = 'link'
   if  key == '-h' : Host = val
+  if  key == '-E' : show_Exception = True
 
 if SSL_cert and ('/' not in SSL_cert): SSL_cert ='/etc/irods/ssl/irods.crt'
 
@@ -157,47 +175,74 @@ SSL_Options = {
 
 def main():
 
-  if AUTH is not None and ENV_DIR:
-    (create_symlink if ENV_DIR == 'l' else create_dircopy) (AUTH)
-  if EXIT: return 0
+  exitcode = 0
+  try:
 
-  settings = {}
+    remove_dot_irods(ENV_DIR_PATH)
+    error = False
 
-  if AUTH == 'pam': 
-    settings.update ( authentication_scheme = 'pam')
+    if AUTH is not None and ENV_DIR:
+      error = not(
+        (create_symlink if ENV_DIR == 'l' else create_dircopy) (AUTH)
+      )
 
-  if METHOD == 'env':
-    settings [ 'irods_env_file' ] = os.path.expanduser ('~/.irods/irods_environment.json') 
+    if EXIT:  return 126
+    if error: return 127
 
-  else:
+    settings = {}
 
-    settings.update ( host=Host,
-                      port=1247,
-                      user='alissa', 
-                      zone='tempZone',
-                      password=(pw_opt if pw[AUTH] is None else pw[AUTH]))
+    if AUTH == 'pam': 
+      settings.update ( authentication_scheme = 'pam')
 
-  if SSL_cert:
+    password_ = (pw_opt if pw[AUTH] is None else pw[AUTH])
 
-    ssl_context = ssl.create_default_context ( purpose=ssl.Purpose.SERVER_AUTH,
-                                               capath=None,
-                                               cadata=None,
-                                               cafile = SSL_cert )
+    if  ENV_DIR == 'd' and password_ :
+      create_auth_file ( password_ )
 
-    if METHOD == 'args': settings.update( SSL_Options )
+    if METHOD == 'env':
 
-### y = ssl_context.load_verify_locations(cafile=SSL_cert)
-    settings [ 'ssl_context' ] = ssl_context
+      settings [ 'irods_env_file' ] = path_join (ENV_DIR_PATH, 'irods_environment.json') 
+
+    else:
+
+      if not password_ : raise LogicError ('No password when using Args method of session init')
+
+      settings.update ( host=Host,
+                        port=1247,
+                        user='alissa', 
+                        zone='tempZone',
+                        password=password_ )
+
+    if SSL_cert:
+
+      ssl_context = ssl.create_default_context ( purpose=ssl.Purpose.SERVER_AUTH,
+                                                 capath=None,
+                                                 cadata=None,
+                                                 cafile = SSL_cert )
+
+      if METHOD == 'args': settings.update( SSL_Options )
+
+###   y = ssl_context.load_verify_locations(cafile=SSL_cert)
+
+      settings [ 'ssl_context' ] = ssl_context
 
 
-  if VERBOSE: _ = "\n".join( "{0:<10} : {{""{0}""}}".format(x) for x in ("SSL_cert","METHOD","AUTH"))+"\n";\
-              print (_.format(**dict(globals().items()+locals().items())) , file = sys.stderr)
+    if ErrVerbose:
+      _ = "\n".join( "{0:<10} : {{""{0}""}}".format(x) for x in ("SSL_cert","METHOD","AUTH"))+"\n"
+      print (_.format(**dict(globals().items()+locals().items())) , file = sys.stderr)
   
-  with iRODSSession( ** settings ) as session:
-    c = session.collections.get('/tempZone/home/alissa')
-    if VERBOSE : print ( c.data_objects, file = sys.stderr )
+    with iRODSSession( **settings ) as session:
+      c = session.collections.get('/tempZone/home/alissa')
+      if ErrVerbose : print ( c.data_objects, file = sys.stderr )
+      return 0 if type(c) is iRODSCollection else 1
 
-  return 0
+  except Exception as e:
+    if show_Exception: raise
+    print ( '--->',repr(e), file = sys.stderr)
+    exitcode = int(getattr(e, 'code', '0')) or 100
+
+  if OutVerbose >= 1: print ('Exiting with code',exitcode)
+  exit (exitcode)
 
 #=================================
 
@@ -205,8 +250,7 @@ if __name__ == '__main__':
 
   retvalue = main ()
 
-  if VERBOSE: print ( '***********\n',
-                      'retvalue = ',retvalue,
-                    '\n***********\n', file = sys.stderr)
+  sys.exit(retvalue) # 0     -> success 
+                     # 1..N  -> failure
+                     # 100   -> unexpected error
 
-  sys.exit(retvalue)
