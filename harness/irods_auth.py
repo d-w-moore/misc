@@ -168,7 +168,7 @@ SSL_Options = {
 def main():
 
   global SSL_cert
-  exitcode = 0
+  exitcode = 100
   try:
 
     error = False
@@ -186,8 +186,9 @@ def main():
 
     password_ = (pw_opt if pw[AUTH] is None else pw[AUTH])
 
-    if  ENV_DIR == 'd' and password_ :
-      create_auth_file ( password_ )
+    if not SKIP_AUTH_DIR_MANIP :
+      if  ENV_DIR == 'd' and password_ :
+        create_auth_file ( password_ )
 
     if METHOD == 'env':
 
@@ -211,12 +212,11 @@ def main():
                                                  capath=None,
                                                  cadata=None,
                                                  cafile = SSL_cert )
-      settings.update( SSL_Options )
-
       settings [ 'ssl_context' ] = ssl_context
 
-    if AUTH == 'pam': 
-      settings.update ( authentication_scheme = 'pam')
+    if METHOD == 'args':
+      if AUTH == 'pam' : settings.update ( authentication_scheme = 'pam')
+      if SSL_cert:       settings.update(  SSL_Options )
 
     if ErrVerbose:
       _ = "\n".join( "{0:<10} : {{""{0}""}}".format(x) for x in ("SSL_cert","METHOD","AUTH"))+"\n"
@@ -228,7 +228,7 @@ def main():
       c = session.collections.get(home_coll)
 
       if OutVerbose >= 2:
-        print( "Home Collection = '{0.path}/{0}' ".format(c))
+        print( "Home Collection = '{0.path}/{0.name}' ".format(c))
         print ( "With data objects: {!r}".format(c.data_objects))
 
       exitcode = (0 if type(c) is iRODSCollection else 1)
@@ -247,7 +247,7 @@ if __name__ == '__main__':
 
   retvalue = main ()
 
-  sys.exit(retvalue) # 0     -> success 
-                     # 1..N  -> failure
-                     # 100   -> unexpected error
+  sys.exit(retvalue) # 0       -> success 
+                     # 1..N    -> failure
+                     # 100,101 -> unexpected error
 
