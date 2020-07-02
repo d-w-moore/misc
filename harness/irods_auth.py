@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import os, ssl, sys, getopt, socket, subprocess, tempfile
+import os, ssl, sys, getopt, socket, subprocess, tempfile, json
 from shutil import copytree, rmtree
 from os.path import ( exists, isdir, isfile, islink, expanduser, dirname,
                       abspath, realpath, join as path_join )
@@ -113,11 +113,14 @@ def create_symlink ( auth ):
 
 class Bad_Env_Dir_Opt (RuntimeError): pass
 
+SKIP_AUTH_DIR_MANIP = False
+
 try:
-  opt,arg = getopt.getopt(sys.argv[1:], 'h:s:e:alxvV:E''pi''P:', ['password='])
+  opt,arg = getopt.getopt(sys.argv[1:], 'kh:s:e:alxvV:E''pi''P:', ['password='])
 except getopt.GetoptError as e:
   print ( """\n\
   Usage: {} [-lvxipa] [ -s <crtpath> ] [ --password <pwd> ]  ...options
+      		-k	skip deletion/creation of auth dir
       		-x	exit after symlinking/copying auth dir
       		-v	stderr verbose on
       		-V N	stdout verbose on, level N
@@ -175,24 +178,23 @@ SSL_Options = {
 
 def main():
 
+  global SSL_cert
   exitcode = 0
   try:
 
-    remove_dot_irods(ENV_DIR_PATH)
     error = False
+    if not SKIP_AUTH_DIR_MANIP :
+      remove_dot_irods(ENV_DIR_PATH)
 
-    if AUTH is not None and ENV_DIR:
-      error = not(
-        (create_symlink if ENV_DIR == 'l' else create_dircopy) (AUTH)
-      )
+      if AUTH is not None and ENV_DIR:
+        error = not(
+          (create_symlink if ENV_DIR == 'l' else create_dircopy) (AUTH)
+        )
 
     if EXIT:  return 126
     if error: return 127
 
     settings = {}
-
-    if AUTH == 'pam': 
-      settings.update ( authentication_scheme = 'pam')
 
     password_ = (pw_opt if pw[AUTH] is None else pw[AUTH])
 
@@ -201,7 +203,9 @@ def main():
 
     if METHOD == 'env':
 
-      settings [ 'irods_env_file' ] = path_join (ENV_DIR_PATH, 'irods_environment.json') 
+      env_filename = settings [ 'irods_env_file' ] = path_join (ENV_DIR_PATH, 'irods_environment.json') 
+      env_json = json.load( open( env_filename) )
+      SSL_cert = env_json ['irods_ssl_ca_certificate_file']
 
     else:
 
@@ -219,13 +223,15 @@ def main():
                                                  capath=None,
                                                  cadata=None,
                                                  cafile = SSL_cert )
-
-      if METHOD == 'args': settings.update( SSL_Options )
-
-###   y = ssl_context.load_verify_locations(cafile=SSL_cert)
+      settings.update( SSL_Options )
 
       settings [ 'ssl_context' ] = ssl_context
 
+###   y = ssl_context.load_verify_locations(cafile=SSL_cert)
+
+
+    if AUTH == 'pam': 
+      settings.update ( authentication_scheme = 'pam')
 
     if ErrVerbose:
       _ = "\n".join( "{0:<10} : {{""{0}""}}".format(x) for x in ("SSL_cert","METHOD","AUTH"))+"\n"
