@@ -8,18 +8,9 @@ from os.path import ( exists, isdir, isfile, islink, expanduser, dirname,
 from irods.session import iRODSSession
 from irods.collection import iRODSCollection
 
-def create_auth_file( pw ):
-  p = None
-  with tempfile.SpooledTemporaryFile() as f:
-    f.write(pw + '\n')
-    f.seek(0)
-    f.read()
-    f.seek(0)
-    null=open('/dev/null','w')
-    p = subprocess.Popen('iinit',stdout=null,stderr=null,stdin=f)        
-    p.communicate()
-  return (p.returncode if p else None)
-
+SCRIPTDIR = dirname(realpath(sys.argv[0]))
+sys.path.insert(0,SCRIPTDIR)
+from create_irodsA import create_auth_file  # --> for creating ~/.irods/.irodsA
 
 # ________ manual tests __________
 
@@ -52,9 +43,6 @@ def create_auth_file( pw ):
 
 # Notes
 #  1. needed: handle DONT_CARE on client side
-
-
-SCRIPTDIR = dirname(realpath(sys.argv[0]))
 
 ENV_DIR_PATH = expanduser( '~/.irods' )
 ENV_DIR = None
@@ -161,6 +149,7 @@ for key,val in opt:
   if  key == '-x' : EXIT = True
   if  key == '-h' : Host = val
   if  key == '-E' : show_Exception = True
+  if  key == '-k' : SKIP_AUTH_DIR_MANIP = True
 
 if SSL_cert and ('/' not in SSL_cert): SSL_cert ='/etc/irods/ssl/irods.crt'
 
@@ -183,14 +172,13 @@ def main():
   try:
 
     error = False
+
     if not SKIP_AUTH_DIR_MANIP :
       remove_dot_irods(ENV_DIR_PATH)
-
       if AUTH is not None and ENV_DIR:
         error = not(
           (create_symlink if ENV_DIR == 'l' else create_dircopy) (AUTH)
         )
-
     if EXIT:  return 126
     if error: return 127
 
@@ -227,9 +215,6 @@ def main():
 
       settings [ 'ssl_context' ] = ssl_context
 
-###   y = ssl_context.load_verify_locations(cafile=SSL_cert)
-
-
     if AUTH == 'pam': 
       settings.update ( authentication_scheme = 'pam')
 
@@ -238,9 +223,15 @@ def main():
       print (_.format(**dict(globals().items()+locals().items())) , file = sys.stderr)
   
     with iRODSSession( **settings ) as session:
-      c = session.collections.get('/tempZone/home/alissa')
-      if ErrVerbose : print ( c.data_objects, file = sys.stderr )
-      return 0 if type(c) is iRODSCollection else 1
+
+      home_coll = '/{0.zone}/home/{0.username}'.format(session)
+      c = session.collections.get(home_coll)
+
+      if OutVerbose >= 2:
+        print( "Home Collection = '{0.path}/{0}' ".format(c))
+        print ( "With data objects: {!r}".format(c.data_objects))
+
+      exitcode = (0 if type(c) is iRODSCollection else 1)
 
   except Exception as e:
     if show_Exception: raise
