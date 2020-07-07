@@ -41,9 +41,11 @@ from create_irodsA import create_auth_file  # --> for creating ~/.irods/.irodsA
 # - - with patch
 
 # aa)     ( -i  -a  )      YES
-# bb)     ( -p  -a  )      YES
+# aa-s)   ( -i  -a -s. )
+# bb)     ( -p  -a  )      YES     --> with and w/o "s." bb-s)
 # cc)     ( -i  -ed )      YES
-# dd)     ( -p  -ed )      YES
+# cc-s)   ( -i  -ed -s. )
+# dd)     ( -p  -ed )      YES     --> with and w/o "s." dd-s)
 # ee) ---
 # ff) ---
 
