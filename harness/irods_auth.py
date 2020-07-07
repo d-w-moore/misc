@@ -7,30 +7,45 @@ from os.path import ( exists, isdir, isfile, islink, expanduser, dirname,
                       abspath, realpath, join as path_join )
 from irods.session import iRODSSession
 from irods.collection import iRODSCollection
+from errno import ENOENT
+
+from irods.connection import Connection
+
+Connection._login_pam_2 = Connection._login_pam
+def verbose_login_pam(self):
+  print('calling PAM login')
+  self._login_pam_2()
+setattr( Connection, '_login_pam', verbose_login_pam)
 
 SCRIPTDIR = dirname(realpath(sys.argv[0]))
 sys.path.insert(0,SCRIPTDIR)
 from create_irodsA import create_auth_file  # --> for creating ~/.irods/.irodsA
 
-# ________ manual tests __________
+# ________ manual tests __________ (run with server setting CS_NEG_DONT_CARE)
+#   -ed : copies from realpath(sys.argv[0]/irods.AUTHMETHOD; calls iinit to make a new AUTH file) 
+#   -a  : calls the iRODSSession constructor using no env_file.
+#         (WARNING when running this test script. '-a' without '-k' recursively deletes ~/.irods)
+#   -s arg: use SSL. arg is abs path to certificate file; '.' defaults to /etc/irods/ssl/irods.crt
+#   -i irods password auth
+#   -i pam password auth
 
-# aa) native with password in session()
-# bb) pam with password in session()
-# cc) native with .irodsA
-# dd) pam with .irodsA
-# ee) native with password in irods_environment.json
-# ff) pam with password in irods_environment.json
+# aa) native with password in session()			( -i  -a  )                     YES
+# bb) pam with password in session()			( -p  -a  )                     YES
+# cc) native with .irodsA				( -i  -ed )                     YES
+# dd) pam with .irodsA					( -p  -ed )                     NO
+# ee) native with password in irods_environment.json  (----------------- n/a )
+# ff) pam with password in irods_environment.json     (----------------- n/a )
 
 # _____________ results __________
 
 # - - with patch
 
-# aa)
-# bb)
-# cc) 
-# dd)
-# ee) 
-# ff)
+# aa)     ( -i  -a  )      YES
+# bb)     ( -p  -a  )      YES
+# cc)     ( -i  -ed )      YES
+# dd)     ( -p  -ed )      YES
+# ee) ---
+# ff) ---
 
 # - - without patch
 
@@ -38,11 +53,8 @@ from create_irodsA import create_auth_file  # --> for creating ~/.irods/.irodsA
 # bb)
 # cc) 
 # dd)
-# ee) 
-# ff)
-
-# Notes
-#  1. needed: handle DONT_CARE on client side
+# ee) ---
+# ff) ---
 
 ENV_DIR_PATH = expanduser( '~/.irods' )
 ENV_DIR = None
@@ -56,6 +68,14 @@ class UnrecognizedFileTypeError(RuntimeError): code = 110
 class CouldNotDeleteError(RuntimeError):       code = 111
 class CouldNotCreateError(RuntimeError):       code = 112
 class LogicError(RuntimeError):                code = 113
+
+def ls_environment( ):
+  try:
+    return os.listdir(ENV_DIR_PATH)
+  except OSError as e:
+    if e.errno == ENOENT:  return None
+    else: raise
+  return list()
 
 ##############################################
 # This script deletes current .irods directory
@@ -194,7 +214,7 @@ def main():
 
       env_filename = settings [ 'irods_env_file' ] = path_join (ENV_DIR_PATH, 'irods_environment.json') 
       env_json = json.load( open( env_filename) )
-      SSL_cert = env_json ['irods_ssl_ca_certificate_file']
+      SSL_cert = env_json .get('irods_ssl_ca_certificate_file', None)
 
     else:
 
@@ -228,6 +248,12 @@ def main():
       c = session.collections.get(home_coll)
 
       if OutVerbose >= 2:
+        my_connect = [s for s in (session.pool.active|session.pool.idle)] [0]
+        print ('auth_scheme = {}'.format(my_connect.account.authentication_scheme))
+        print ('socket = {}'.format(my_connect.socket.__class__))
+
+      if OutVerbose >= 3:
+        print( "env / auth files dir list: " + str(ls_environment()))
         print( "Home Collection = '{0.path}/{0.name}' ".format(c))
         print ( "With data objects: {!r}".format(c.data_objects))
 
