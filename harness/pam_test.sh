@@ -7,11 +7,11 @@ tabbed_output() {
 
 for opts in \
             " -p -a -s. "\
-            " -p -a "\
-            " -i -ed "\
-            " -i -a "\
+            " -p -a     "\
+            " -i -ed    "\
+            " -i -a     "\
             " -i -a -s. "\
-            " -p -ed "\
+            " -p -ed    "\
 ;do
   echo '[' $opts ']'
   x=$( 
