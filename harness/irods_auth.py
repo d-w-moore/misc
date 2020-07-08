@@ -22,7 +22,7 @@ sys.path.insert(0,SCRIPTDIR)
 from create_irodsA import create_auth_file  # --> for creating ~/.irods/.irodsA
 
 # ________ manual tests __________ (run with server setting CS_NEG_DONT_CARE)
-#   -ed : copies from realpath(sys.argv[0]/irods.AUTHMETHOD; calls iinit to make a new AUTH file) 
+#   -ed : copies from realpath(sys.argv[0]/irods.AUTHMETHOD; calls iinit to make a new AUTH file)
 #   -a  : calls the iRODSSession constructor using no env_file.
 #         (WARNING when running this test script. '-a' without '-k' recursively deletes ~/.irods)
 #   -s arg: use SSL. arg is abs path to certificate file; '.' defaults to /etc/irods/ssl/irods.crt
@@ -59,6 +59,8 @@ from create_irodsA import create_auth_file  # --> for creating ~/.irods/.irodsA
 # ff) ---
 
 ENV_DIR_PATH = expanduser( '~/.irods' )
+ENV_DIR_FILE_PATH = path_join( ENV_DIR_PATH, 'irods_environment.json' )
+
 ENV_DIR = None
 ErrVerbose =  False
 OutVerbose =  1
@@ -71,13 +73,23 @@ class CouldNotDeleteError(RuntimeError):       code = 111
 class CouldNotCreateError(RuntimeError):       code = 112
 class LogicError(RuntimeError):                code = 113
 
-def ls_environment( ):
+def ls_environment_dir( ):
   try:
     return os.listdir(ENV_DIR_PATH)
   except OSError as e:
     if e.errno == ENOENT:  return None
     else: raise
   return list()
+
+def save_environment(j):
+  with open( ENV_DIR_FILE_PATH,'w' ) as f:
+    json.dump(j,f,indent=4)
+
+def load_environment():
+  try:
+    with open(ENV_DIR_FILE_PATH,'r') as f:
+      return json.load(f)
+  except: pass
 
 ##############################################
 # This script deletes current .irods directory
@@ -106,7 +118,7 @@ def create_dircopy ( auth ):
     copytree(COPY_FM_NAME,COPY_TO_NAME)
     if not exists(COPY_TO_NAME) : return False
   return True
-    
+
 def create_symlink ( auth ):
   LINK_NAME = ENV_DIR_PATH
   if exists(LINK_NAME) : raise CouldNotDeleteError
@@ -139,7 +151,7 @@ except getopt.GetoptError as e:
       		-E	show Exception detail
       		--password=<password>
 
-        options (___Auth category___):	-i	AUTH with irods     
+        options (___Auth category___):	-i	AUTH with irods
 					-p	AUTH with pam
      	options (___Call style___):	-e <L|D>	load environment file from (Link/Directory)
 					-a	pass args for Authentication
@@ -147,7 +159,7 @@ except getopt.GetoptError as e:
   )
   sys.exit(125)
 
-pw = { None: None, 
+pw = { None: None,
        'irods' :  'apass',
        'pam'   :  'test123' }
 
@@ -187,6 +199,7 @@ SSL_Options = {
 
 #=================================
 
+
 def main():
 
   global SSL_cert
@@ -208,13 +221,19 @@ def main():
 
     password_ = (pw_opt if pw[AUTH] is None else pw[AUTH])
 
+    env_json = load_environment()
+
+    if env_json is not None:
+      env_json ['irods_host'] = Host
+      save_environment (env_json)
+
     if not SKIP_AUTH_DIR_MANIP :
       if  ENV_DIR == 'd' and password_ :
         create_auth_file ( password_ )
 
     if METHOD == 'env':
 
-      env_filename = settings [ 'irods_env_file' ] = path_join (ENV_DIR_PATH, 'irods_environment.json') 
+      env_filename = settings [ 'irods_env_file' ] = ENV_DIR_FILE_PATH
       env_json = json.load( open( env_filename) )
       SSL_cert = env_json .get('irods_ssl_ca_certificate_file', None)
 
@@ -224,7 +243,7 @@ def main():
 
       settings.update ( host=Host,
                         port=1247,
-                        user='alissa', 
+                        user='alissa',
                         zone='tempZone',
                         password=password_ )
 
@@ -243,7 +262,7 @@ def main():
     if ErrVerbose:
       _ = "\n".join( "{0:<10} : {{""{0}""}}".format(x) for x in ("SSL_cert","METHOD","AUTH"))+"\n"
       print (_.format(**dict(globals().items()+locals().items())) , file = sys.stderr)
-  
+
     with iRODSSession( **settings ) as session:
 
       home_coll = '/{0.zone}/home/{0.username}'.format(session)
@@ -255,7 +274,7 @@ def main():
         print ('socket = {}'.format(my_connect.socket.__class__))
 
       if OutVerbose >= 3:
-        print( "env / auth files dir list: " + str(ls_environment()))
+        print( "env / auth files dir list: " + str(ls_environment_dir()))
         print( "Home Collection = '{0.path}/{0.name}' ".format(c))
         print ( "With data objects: {!r}".format(c.data_objects))
 
@@ -271,11 +290,11 @@ def main():
 
 #=================================
 
-if __name__ == '__main__': 
+if __name__ == '__main__':
 
   retvalue = main ()
 
-  sys.exit(retvalue) # 0       -> success 
+  sys.exit(retvalue) # 0       -> success
                      # 1..N    -> failure
                      # 100,101 -> unexpected error
 
