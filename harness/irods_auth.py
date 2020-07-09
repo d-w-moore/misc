@@ -91,6 +91,13 @@ def load_environment():
       return json.load(f)
   except: pass
 
+def delete_keys_in_environment_file ( key_condition ):
+  env = load_environment()
+  keys = env.keys()
+  for k in keys:
+    if key_condition( k): del env[k]
+  save_environment (env)
+
 ##############################################
 # This script deletes current .irods directory
 ##############################################
@@ -163,6 +170,16 @@ pw = { None: None,
        'irods' :  'apass',
        'pam'   :  'test123' }
 
+SSL_Options = {
+    "irods_client_server_negotiation": "request_server_negotiation",
+    "irods_client_server_policy": "CS_NEG_REQUIRE",
+    "irods_ssl_verify_server": "cert",
+    "irods_encryption_key_size": 16,
+    "irods_encryption_salt_size": 8,
+    "irods_encryption_num_hash_rounds": 16,
+    "irods_encryption_algorithm": "AES-256-CBC",
+}
+
 Host = socket.gethostname()
 AUTH = None  #  None, 'irods', 'pam'
 METHOD = 'env'  # args , env
@@ -185,17 +202,19 @@ for key,val in opt:
   if  key == '-E' : show_Exception = True
   if  key == '-k' : SKIP_AUTH_DIR_MANIP = True
 
-if SSL_cert and ('/' not in SSL_cert): SSL_cert ='/etc/irods/ssl/irods.crt'
 
-SSL_Options = {
-    "irods_client_server_negotiation": "request_server_negotiation",
-    "irods_client_server_policy": "CS_NEG_REQUIRE",
-    "irods_ssl_verify_server": "cert",
-    "irods_encryption_key_size": 16,
-    "irods_encryption_salt_size": 8,
-    "irods_encryption_num_hash_rounds": 16,
-    "irods_encryption_algorithm": "AES-256-CBC",
-}
+suppress_env_ssl = False
+
+if SSL_cert:
+
+  if SSL_cert == '-' and METHOD == 'env':
+
+    suppress_env_ssl = True
+    SSL_cert = False
+
+  elif SSL_cert != '' and ('/' not in SSL_cert):
+
+    SSL_cert ='/etc/irods/ssl/irods.crt'
 
 #=================================
 
@@ -231,12 +250,20 @@ def main():
       if  ENV_DIR == 'd' and password_ :
         create_auth_file ( password_ )
 
+
     if METHOD == 'env':
+
+      if suppress_env_ssl:
+        delete_keys_in_environment_file( 
+          lambda k : k.startswith('irods_ssl_') or k.startswith('irods_encryption_')
+        )
 
       env_filename = settings [ 'irods_env_file' ] = ENV_DIR_FILE_PATH
       env_json = json.load( open( env_filename) )
-      SSL_cert = env_json .get('irods_ssl_ca_certificate_file', None)
 
+        
+      SSL_cert = env_json .get('irods_ssl_ca_certificate_file', None)
+      
     else:
 
       if not password_ : raise LogicError ('No password when using Args method of session init')
