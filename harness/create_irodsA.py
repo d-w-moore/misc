@@ -10,7 +10,7 @@ def create_auth_file(pw):
     f.read()
     f.seek(0)
     null=open('/dev/null','w')
-    p = subprocess.Popen('iinit',stdout=null,stderr=null,stdin=f)        
+    p = subprocess.Popen('iinit',stdout=null,stderr=null,stdin=f)
     p.communicate()
   return (p.returncode if p else None)
 
