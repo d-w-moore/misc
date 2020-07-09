@@ -239,17 +239,22 @@ def main():
 
     env_json = load_environment()
 
+    #----------------------
     if env_json is not None:
       env_json ['irods_host'] = Host
-      if suppress_env_ssl:
-        delete_keys_in_dict( env_json, lambda k : k.startswith('irods_ssl_')    or \
-                                                  k.startswith('irods_encryption_') or \
-                                                  k == 'irods_client_server_policy')
       save_environment (env_json)
 
     if not SKIP_AUTH_DIR_MANIP :
       if  ENV_DIR == 'd' and password_ :
         create_auth_file ( password_ )
+
+    if env_json:
+      if suppress_env_ssl:
+        delete_keys_in_dict( env_json, lambda k : k.startswith('irods_ssl_')    or \
+                                                  k.startswith('irods_encryption_') or \
+                                                  k == 'irods_client_server_policy')
+      save_environment (env_json)
+    #----------------------
 
     if METHOD == 'env':
 
