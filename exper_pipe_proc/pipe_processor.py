@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
   # -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
   #
-  # -- demo #2 -- cascale of two stream processors with a
+  # -- demo #2 -- cascade of two stream processors with a
   #               generator expression a as input
 
   a = (i for i in Adder([ 3,4,5 ],addend=5000))
