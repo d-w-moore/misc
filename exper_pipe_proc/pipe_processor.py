@@ -43,7 +43,7 @@ if __name__ == '__main__':
   try:
     p = StreamProcessor ( x for x in [] )
   except Exception as e:
-    print (type(e),':\n',e.message)
+    print ( '**** {!r} ****'.format(e) )
     
   # -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
   #
