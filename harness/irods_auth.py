@@ -91,12 +91,10 @@ def load_environment():
       return json.load(f)
   except: pass
 
-def delete_keys_in_environment_file ( key_condition ):
-  env = load_environment()
-  keys = env.keys()
+def delete_keys_in_dict ( D, key_condition ):
+  keys = D.keys()
   for k in keys:
-    if key_condition( k): del env[k]
-  save_environment (env)
+    if key_condition(k): del D[k]
 
 ##############################################
 # This script deletes current .irods directory
@@ -202,7 +200,6 @@ for key,val in opt:
   if  key == '-E' : show_Exception = True
   if  key == '-k' : SKIP_AUTH_DIR_MANIP = True
 
-
 suppress_env_ssl = False
 
 if SSL_cert:
@@ -244,19 +241,18 @@ def main():
 
     if env_json is not None:
       env_json ['irods_host'] = Host
+      if suppress_env_ssl:
+        delete_keys_in_dict( env_json, lambda k : k.startswith('irods_ssl_')    or \
+                                                  k.startswith('irods_encryption_') or \
+                                                  k == 'irods_client_server_policy')
       save_environment (env_json)
 
     if not SKIP_AUTH_DIR_MANIP :
       if  ENV_DIR == 'd' and password_ :
         create_auth_file ( password_ )
 
-
     if METHOD == 'env':
 
-      if suppress_env_ssl:
-        delete_keys_in_environment_file( 
-          lambda k : k.startswith('irods_ssl_') or k.startswith('irods_encryption_')
-        )
 
       env_filename = settings [ 'irods_env_file' ] = ENV_DIR_FILE_PATH
       env_json = json.load( open( env_filename) )
