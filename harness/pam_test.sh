@@ -18,14 +18,14 @@ for opts in \
             " --pam   --env            "\
             " --pam   --env  --ssl=no  "\
 ;do
-  (( TOTAL ++ ))
+  ((TOTAL++))
   echo '[' $opts ']'
   x=$( 
        		python $(dirname $0)/irods_auth.py $opts -V3
-  ) && (( PASS++ ))
+  ) && ((PASSED++))
   y=$(tabbed_output "$x")
   printf '%s\n' "$y"
 done
 
 echo "------------------------------------"
-echo "${PASS} tests out of ${TOTAL} passed"
+echo "${PASSED} tests out of ${TOTAL} passed"

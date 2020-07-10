@@ -34,9 +34,9 @@ def usage():
 
 		-k	skip deletion/creation of auth dir ( same as -K1 )
                 -K n where n =
-                    0 ultimate freedom                           H  O
-                    1 change hostname, and only if incorrect     H  -
-                    2 change nothing                             -  -
+                    0 ultimate freedom to write env dirs & auth file( .irodsA )
+                    1 change hostname, and only if incorrect
+                    2 change nothing about environment; keep existing
       		-x	exit after symlinking/copying auth dir
       		-v	stderr verbose on
       		-V N	stdout verbose on, level N

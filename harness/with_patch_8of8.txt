@@ -1,0 +1,60 @@
+[ --pam --arg --ssl=yes ]
+		calling PAM login
+		auth_scheme = pam
+		socket = <class 'ssl.SSLSocket'>
+		env / auth files dir list: None
+		Home Collection = '/tempZone/home/alissa/alissa' 
+		With data objects: [<iRODSDataObject 10019 a.dat>]
+		Exiting with code 0
+[ --pam --arg ]
+		calling PAM login
+		auth_scheme = pam
+		socket = <class 'socket._socketobject'>
+		env / auth files dir list: None
+		Home Collection = '/tempZone/home/alissa/alissa' 
+		With data objects: [<iRODSDataObject 10019 a.dat>]
+		Exiting with code 0
+[ --irods --env ]
+		auth_scheme = native
+		socket = <class 'ssl.SSLSocket'>
+		env / auth files dir list: ['.irodsA', 'irods_environment.json']
+		Home Collection = '/tempZone/home/alissa/alissa' 
+		With data objects: [<iRODSDataObject 10019 a.dat>]
+		Exiting with code 0
+[ --irods --env --ssl=no ]
+		auth_scheme = native
+		socket = <class 'socket._socketobject'>
+		env / auth files dir list: ['.irodsA', 'irods_environment.json']
+		Home Collection = '/tempZone/home/alissa/alissa' 
+		With data objects: [<iRODSDataObject 10019 a.dat>]
+		Exiting with code 0
+[ --irods --arg ]
+		auth_scheme = native
+		socket = <class 'socket._socketobject'>
+		env / auth files dir list: None
+		Home Collection = '/tempZone/home/alissa/alissa' 
+		With data objects: [<iRODSDataObject 10019 a.dat>]
+		Exiting with code 0
+[ --irods --arg --ssl=yes ]
+		auth_scheme = native
+		socket = <class 'ssl.SSLSocket'>
+		env / auth files dir list: None
+		Home Collection = '/tempZone/home/alissa/alissa' 
+		With data objects: [<iRODSDataObject 10019 a.dat>]
+		Exiting with code 0
+[ --pam --env ]
+		auth_scheme = native
+		socket = <class 'ssl.SSLSocket'>
+		env / auth files dir list: ['.irodsA', 'irods_environment.json']
+		Home Collection = '/tempZone/home/alissa/alissa' 
+		With data objects: [<iRODSDataObject 10019 a.dat>]
+		Exiting with code 0
+[ --pam --env --ssl=no ]
+		auth_scheme = native
+		socket = <class 'socket._socketobject'>
+		env / auth files dir list: ['.irodsA', 'irods_environment.json']
+		Home Collection = '/tempZone/home/alissa/alissa' 
+		With data objects: [<iRODSDataObject 10019 a.dat>]
+		Exiting with code 0
+------------------------------------
+8 tests out of 8 passed
