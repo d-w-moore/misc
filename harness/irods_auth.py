@@ -60,7 +60,6 @@ from create_irodsA import create_auth_file  # --> for creating ~/.irods/.irodsA
 
 ENV_DIR_PATH = expanduser( '~/.irods' )
 ENV_DIR_FILE_PATH = path_join( ENV_DIR_PATH, 'irods_environment.json' )
-
 ENV_DIR = None
 ErrVerbose =  False
 OutVerbose =  1
@@ -140,14 +139,18 @@ def create_symlink ( auth ):
 
 class Bad_Env_Dir_Opt (RuntimeError): pass
 
-SKIP_AUTH_DIR_MANIP = False
+SKIP_AUTH_DIR_MANIP = 0
 
 try:
-  opt,arg = getopt.getopt(sys.argv[1:], 'kh:s:e:alxvV:E''pi''P:', ['password='])
+  opt,arg = getopt.getopt(sys.argv[1:], 'kK:h:s:e:alxvV:E''pi''P:', ['password='])
 except getopt.GetoptError as e:
   print ( """\n\
   Usage: {} [-lvxipa] [ -s <crtpath> ] [ --password <pwd> ]  ...options
-      		-k	skip deletion/creation of auth dir
+		-k	skip deletion/creation of auth dir ( same as -K1 )
+                -K n where n =
+                    0 ultimate freedom                           H  O
+                    1 change hostname, and only if incorrect     H  -
+                    2 change nothing                             -  -
       		-x	exit after symlinking/copying auth dir
       		-v	stderr verbose on
       		-V N	stdout verbose on, level N
@@ -198,7 +201,11 @@ for key,val in opt:
   if  key == '-x' : EXIT = True
   if  key == '-h' : Host = val
   if  key == '-E' : show_Exception = True
-  if  key == '-k' : SKIP_AUTH_DIR_MANIP = True
+  if  key == '-k' : SKIP_AUTH_DIR_MANIP = 1
+  if  key == '-K' : SKIP_AUTH_DIR_MANIP = int(val)
+
+if SKIP_AUTH_DIR_MANIP not in (0,1,2):
+  raise ValueError ('"-k/-K" option value out of range');
 
 suppress_env_ssl = False
 
@@ -224,7 +231,7 @@ def main():
 
     error = False
 
-    if not SKIP_AUTH_DIR_MANIP :
+    if (SKIP_AUTH_DIR_MANIP==0) :
       remove_dot_irods(ENV_DIR_PATH)
       if AUTH is not None and ENV_DIR:
         error = not(
@@ -241,30 +248,30 @@ def main():
 
     #----------------------
     if env_json is not None:
-      env_json ['irods_host'] = Host
-      save_environment (env_json)
+      host_setting = env_json ['irods_host']
+      if (host_setting != Host) and (SKIP_AUTH_DIR_MANIP in (0,1)) :
+        env_json ['irods_host'] = Host
+        if SKIP_AUTH_DIR_MANIP != 0: print("WARNING, correcting host setting in env", file=sys.stderr)
+        save_environment (env_json)
 
-    if not SKIP_AUTH_DIR_MANIP :
-      if  ENV_DIR == 'd' and password_ :
+    if (SKIP_AUTH_DIR_MANIP==0):
+      if ENV_DIR == 'd' and password_ :
         create_auth_file ( password_ )
 
     if env_json:
-      if suppress_env_ssl:
+      if suppress_env_ssl and (SKIP_AUTH_DIR_MANIP==0):
         delete_keys_in_dict( env_json, lambda k : k.startswith('irods_ssl_')    or \
                                                   k.startswith('irods_encryption_') or \
                                                   k == 'irods_client_server_policy')
-      save_environment (env_json)
+        save_environment (env_json)
     #----------------------
 
     if METHOD == 'env':
 
-
       env_filename = settings [ 'irods_env_file' ] = ENV_DIR_FILE_PATH
       env_json = json.load( open( env_filename) )
+      SSL_cert = env_json.get('irods_ssl_ca_certificate_file', None)
 
-        
-      SSL_cert = env_json .get('irods_ssl_ca_certificate_file', None)
-      
     else:
 
       if not password_ : raise LogicError ('No password when using Args method of session init')
