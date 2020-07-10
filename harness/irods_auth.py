@@ -193,7 +193,7 @@ try:
                           'env_dir',
                           'args',
                           'help',
-                          'ssl_option=',
+                          'ssl=',
                           ])
 except getopt.GetoptError as e:
   usage()
@@ -245,11 +245,11 @@ for key,val in opt:
       if   key.endswith('-pam_auth'):    AUTH = 'pam'
       elif key.endswith('-irods_auth'):  AUTH = 'irods'
       elif key.endswith('-ssl'):
+          SSL_cert = val
           if SSL_cert[:1] in "ynYN":  # yes will use DEFAULT_CERT_PATH
               # translate to short option value : "." default cert path , "-" no use of SSL
-              SSL_cert = { "Y":".", "N":"-" }[val.upper()]
+              SSL_cert = { "Y":".", "N":"-" }[val[0].upper()]
           else: # override cert path
-              SSL_cert = val
               if "/" not in SSL_cert: raise BadCertificatePath
       elif key.endswith('-args'):      METHOD = 'args'
       elif key.endswith('-env_dir'):     
