@@ -1,7 +1,7 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
+
 from __future__ import print_function
 from sys import stdout
-
 
 class StreamProcessor (object):
 
@@ -29,7 +29,6 @@ class Adder (StreamProcessor):
         x = yield
         while 1: x = yield (x + self.addend)
 
-
 class Negator(StreamProcessor):
 
     def process (self):
@@ -41,8 +40,8 @@ class Negator(StreamProcessor):
             else:
                 x = yield
 
-
 if __name__ == '__main__':
+
 
     try:
         p = StreamProcessor ( x for x in [] )
@@ -59,14 +58,15 @@ if __name__ == '__main__':
 
     # -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
     #
-    # -- demo #2 -- cascade of two stream processors with a
-    #               generator expression a as input
+    # -- demo #2 -- cascade of two stream processors with the list
+    #               to be iterated as as input to first stage
 
     a = (i for i in Adder([ 3,4,5 ],addend=5000))
 
     print([i for i in Adder(a,addend=100)])
 
     # -_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_
+
     #
     # -- demo #3 -- iterate on a function generator instance
 
@@ -81,7 +81,7 @@ if __name__ == '__main__':
 
     try:                                 #     Loop over next(a) to iterate.
         while 1:
-            print ('%2s%12d%c'%('',next(a),13),file=stdout,end='' )
+            print ('%2s%12d%c'%('',next(a),13), file=stdout, end='' )
             stdout.flush()
     except StopIteration:
         pass
