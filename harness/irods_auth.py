@@ -260,9 +260,10 @@ def main():
 
     if env_json:
       if suppress_env_ssl and (SKIP_AUTH_DIR_MANIP==0):
-        delete_keys_in_dict( env_json, lambda k : k.startswith('irods_ssl_')    or \
-                                                  k.startswith('irods_encryption_') or \
-                                                  k == 'irods_client_server_policy')
+        delete_keys_in_dict( env_json, lambda k : k.startswith('irods_ssl_')    or        \
+                                                  k.startswith('irods_encryption_') or    \
+                                                  k in ( 'irods_client_server_policy',
+                                                         'irods_client_server_negotiation') )
         save_environment (env_json)
     #----------------------
 
