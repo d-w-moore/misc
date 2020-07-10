@@ -11,6 +11,48 @@ from errno import ENOENT
 
 from irods.connection import Connection
 
+def usage():
+
+  print ( """
+  Usage: {} [-lvxipa] [ -s <crtpath> ] ... options:
+
+      (preferred) long options:
+
+      		--ssh_option={{ yes | no | "/path/to/cert" }}
+
+		Auth Type:
+      			--irods_auth
+      			--pam_auth
+
+                Method to supply constructor for iRODSSession
+                	--env_dir
+                	--args
+
+      		--password={{ password }}
+
+      (low-level) short options:
+
+		-k	skip deletion/creation of auth dir ( same as -K1 )
+                -K n where n =
+                    0 ultimate freedom                           H  O
+                    1 change hostname, and only if incorrect     H  -
+                    2 change nothing                             -  -
+      		-x	exit after symlinking/copying auth dir
+      		-v	stderr verbose on
+      		-V N	stdout verbose on, level N
+      		-s	add SSL opts to cmd line
+      		-h	hostname
+      		-E	show Exception detail
+
+        options (___Auth category___):	-i	AUTH with irods
+					-p	AUTH with pam
+     	options (___Call style___):	-e <L|D>	load environment file from (Link/Directory)
+					-a	pass args for Authentication
+    \n""".format(sys.argv[0])
+  )
+  sys.exit(125)
+
+
 Connection._login_pam_2 = Connection._login_pam
 def verbose_login_pam(self):
   print('calling PAM login')
@@ -58,6 +100,7 @@ from create_irodsA import create_auth_file  # --> for creating ~/.irods/.irodsA
 # ee) ---
 # ff) ---
 
+DEFAULT_CERT_PATH = '/etc/irods/ssl/irods.crt'
 ENV_DIR_PATH = expanduser( '~/.irods' )
 ENV_DIR_FILE_PATH = path_join( ENV_DIR_PATH, 'irods_environment.json' )
 ENV_DIR = None
@@ -71,6 +114,7 @@ class UnrecognizedFileTypeError(RuntimeError): code = 110
 class CouldNotDeleteError(RuntimeError):       code = 111
 class CouldNotCreateError(RuntimeError):       code = 112
 class LogicError(RuntimeError):                code = 113
+class BadCertificatePath(RuntimeError):        code = 114
 
 def ls_environment_dir( ):
   try:
@@ -142,30 +186,17 @@ class Bad_Env_Dir_Opt (RuntimeError): pass
 SKIP_AUTH_DIR_MANIP = 0
 
 try:
-  opt,arg = getopt.getopt(sys.argv[1:], 'kK:h:s:e:alxvV:E''pi''P:', ['password='])
+  opt,arg = getopt.getopt(sys.argv[1:], 'kK:h:s:e:alxvV:E''pi''P:', [
+                          'password=',
+                          'irods_auth',
+                          'pam_auth',
+                          'env_dir',
+                          'args',
+                          'help',
+                          'ssl_option=',
+                          ])
 except getopt.GetoptError as e:
-  print ( """\n\
-  Usage: {} [-lvxipa] [ -s <crtpath> ] [ --password <pwd> ]  ...options
-		-k	skip deletion/creation of auth dir ( same as -K1 )
-                -K n where n =
-                    0 ultimate freedom                           H  O
-                    1 change hostname, and only if incorrect     H  -
-                    2 change nothing                             -  -
-      		-x	exit after symlinking/copying auth dir
-      		-v	stderr verbose on
-      		-V N	stdout verbose on, level N
-      		-s	add SSL opts to cmd line
-      		-h	hostname
-      		-E	show Exception detail
-      		--password=<password>
-
-        options (___Auth category___):	-i	AUTH with irods
-					-p	AUTH with pam
-     	options (___Call style___):	-e <L|D>	load environment file from (Link/Directory)
-					-a	pass args for Authentication
-    \n""".format(sys.argv[0])
-  )
-  sys.exit(125)
+  usage()
 
 pw = { None: None,
        'irods' :  'apass',
@@ -187,22 +218,43 @@ METHOD = 'env'  # args , env
 SSL_cert = False
 
 for key,val in opt:
-  if  key == '--password' : pw_opt = val
-  if  key == '-p' : AUTH = 'pam'
-  if  key == '-i' : AUTH = 'irods'
-  if  key == '-a' : METHOD = 'args'
-  if  key == '-e' :
+  #
+  # -- short options
+  #
+  if  key == '--help' : usage()
+  elif  key == '--password' : pw_opt = val
+  elif  key == '-p' : AUTH = 'pam'
+  elif  key == '-i' : AUTH = 'irods'
+  elif  key == '-a' : METHOD = 'args'
+  elif  key == '-e' :
     METHOD = 'env'
     ENV_DIR = val.lower()
     if 'dl'.find(ENV_DIR) < 0: raise Bad_Env_Dir_Opt ("need -e arg to be 'l' or 'd'")
-  if  key == '-s' : SSL_cert = val
-  if  key == '-v' : ErrVerbose = True;
-  if  key == '-V' : OutVerbose = int(val)
-  if  key == '-x' : EXIT = True
-  if  key == '-h' : Host = val
-  if  key == '-E' : show_Exception = True
-  if  key == '-k' : SKIP_AUTH_DIR_MANIP = 1
-  if  key == '-K' : SKIP_AUTH_DIR_MANIP = int(val)
+  elif  key == '-s' : SSL_cert = val
+  elif  key == '-v' : ErrVerbose = True;
+  elif  key == '-V' : OutVerbose = int(val)
+  elif  key == '-x' : EXIT = True
+  elif  key == '-h' : Host = val
+  elif  key == '-E' : show_Exception = True
+  elif  key == '-k' : SKIP_AUTH_DIR_MANIP = 1
+  elif  key == '-K' : SKIP_AUTH_DIR_MANIP = int(val)
+  #
+  # -- long options
+  #
+  elif  key .startswith('--'):
+      if   key.endswith('-pam_auth'):    AUTH = 'pam'
+      elif key.endswith('-irods_auth'):  AUTH = 'irods'
+      elif key.endswith('-ssl'):
+          if SSL_cert[:1] in "ynYN":  # yes will use DEFAULT_CERT_PATH
+              # translate to short option value : "." default cert path , "-" no use of SSL
+              SSL_cert = { "Y":".", "N":"-" }[val.upper()]
+          else: # override cert path
+              SSL_cert = val
+              if "/" not in SSL_cert: raise BadCertificatePath
+      elif key.endswith('-args'):      METHOD = 'args'
+      elif key.endswith('-env_dir'):     
+          METHOD = 'env'
+          ENV_DIR = 'd'
 
 if SKIP_AUTH_DIR_MANIP not in (0,1,2):
   raise ValueError ('"-k/-K" option value out of range');
@@ -216,9 +268,9 @@ if SSL_cert:
     suppress_env_ssl = True
     SSL_cert = False
 
-  elif SSL_cert != '' and ('/' not in SSL_cert):
+  elif SSL_cert not in ('','-') and ('/' not in SSL_cert):
 
-    SSL_cert ='/etc/irods/ssl/irods.crt'
+    SSL_cert = DEFAULT_CERT_PATH
 
 #=================================
 
