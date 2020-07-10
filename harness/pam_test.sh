@@ -9,14 +9,14 @@ TOTAL=0
 PASSED=0
 
 for opts in \
-            " -p -a -s.  "\
-            " -p -a      "\
-            " -i -ed     "\
-            " -i -ed -s- "\
-            " -i -a      "\
-            " -i -a -s.  "\
-            " -p -ed     "\
-            " -p -ed -s- "\
+            " --pam   --arg  --ssl=yes "\
+            " --pam   --arg            "\
+            " --irods --env            "\
+            " --irods --env  --ssl=no  "\
+            " --irods --arg            "\
+            " --irods --arg  --ssl=yes "\
+            " --pam   --env            "\
+            " --pam   --env  --ssl=no  "\
 ;do
   (( TOTAL ++ ))
   echo '[' $opts ']'
