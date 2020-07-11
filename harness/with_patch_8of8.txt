@@ -6,7 +6,7 @@
 		Home Collection = '/tempZone/home/alissa/alissa' 
 		With data objects: [<iRODSDataObject 10019 a.dat>]
 		Exiting with code 0
-[ --pam --arg ]
+[ --pam --arg --ssl=no ]
 		calling PAM login
 		auth_scheme = pam
 		socket = <class 'socket._socketobject'>
@@ -14,7 +14,7 @@
 		Home Collection = '/tempZone/home/alissa/alissa' 
 		With data objects: [<iRODSDataObject 10019 a.dat>]
 		Exiting with code 0
-[ --irods --env ]
+[ --irods --env --ssl=yes ]
 		auth_scheme = native
 		socket = <class 'ssl.SSLSocket'>
 		env / auth files dir list: ['.irodsA', 'irods_environment.json']
@@ -28,13 +28,6 @@
 		Home Collection = '/tempZone/home/alissa/alissa' 
 		With data objects: [<iRODSDataObject 10019 a.dat>]
 		Exiting with code 0
-[ --irods --arg ]
-		auth_scheme = native
-		socket = <class 'socket._socketobject'>
-		env / auth files dir list: None
-		Home Collection = '/tempZone/home/alissa/alissa' 
-		With data objects: [<iRODSDataObject 10019 a.dat>]
-		Exiting with code 0
 [ --irods --arg --ssl=yes ]
 		auth_scheme = native
 		socket = <class 'ssl.SSLSocket'>
@@ -42,7 +35,14 @@
 		Home Collection = '/tempZone/home/alissa/alissa' 
 		With data objects: [<iRODSDataObject 10019 a.dat>]
 		Exiting with code 0
-[ --pam --env ]
+[ --irods --arg --ssl=no ]
+		auth_scheme = native
+		socket = <class 'socket._socketobject'>
+		env / auth files dir list: None
+		Home Collection = '/tempZone/home/alissa/alissa' 
+		With data objects: [<iRODSDataObject 10019 a.dat>]
+		Exiting with code 0
+[ --pam --env --ssl=yes ]
 		auth_scheme = native
 		socket = <class 'ssl.SSLSocket'>
 		env / auth files dir list: ['.irodsA', 'irods_environment.json']

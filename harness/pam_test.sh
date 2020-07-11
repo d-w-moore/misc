@@ -10,12 +10,12 @@ PASSED=0
 
 for opts in \
             " --pam   --arg  --ssl=yes "\
-            " --pam   --arg            "\
-            " --irods --env            "\
+            " --pam   --arg  --ssl=no  "\
+            " --irods --env  --ssl=yes "\
             " --irods --env  --ssl=no  "\
-            " --irods --arg            "\
             " --irods --arg  --ssl=yes "\
-            " --pam   --env            "\
+            " --irods --arg  --ssl=no  "\
+            " --pam   --env  --ssl=yes "\
             " --pam   --env  --ssl=no  "\
 ;do
   ((TOTAL++))
