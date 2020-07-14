@@ -9,15 +9,22 @@ TOTAL=0
 PASSED=0
 
 for opts in \
-            " --pam   --arg  --ssl=yes "\
-            " --pam   --arg  --ssl=no  "\
-            " --irods --env  --ssl=yes "\
-            " --irods --env  --ssl=no  "\
-            " --irods --arg  --ssl=yes "\
-            " --irods --arg  --ssl=no  "\
-            " --pam   --env  --ssl=yes "\
-            " --pam   --env  --ssl=no  "\
+            " --pam_auth   --arg  --ssl=yes "\
+            " --pam_auth   --arg  --ssl=no  "\
+            " --irods_auth --env  --ssl=yes "\
+            " --irods_auth --env  --ssl=no  "\
+            " --irods_auth --arg  --ssl=yes "\
+            " --irods_auth --arg  --ssl=no  "\
+            " --pam_auth   --env  --ssl=yes "\
+            " --pam_auth   --env  --ssl=no  "\
 ;do
+  python -c "if True:
+	from irods.connection import Connection
+	exit(0 if getattr(Connection,'DISALLOWING_PAM_PLAINTEXT',
+            	None) is not None else 1)" && \
+  [[ $opts =~ --pam_auth ]] && \
+  [[ $opts =~ --arg      ]] && \
+  [[ $opts =~ --ssl=no   ]] && { continue; }
   ((TOTAL++))
   echo '[' $opts ']'
   x=$( 

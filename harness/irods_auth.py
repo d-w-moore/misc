@@ -18,7 +18,7 @@ def usage():
 
       (preferred) long options:
 
-      		--ssh_option={{ yes | no | "/path/to/cert" }}
+      		--ssl={{ yes | no | "/path/to/cert" }}
 
 		Auth Type:
       			--irods_auth
