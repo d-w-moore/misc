@@ -233,7 +233,7 @@ for key,val in opt:
     if 'dl'.find(ENV_DIR) < 0: raise Bad_Env_Dir_Opt ("need -e arg to be 'l' or 'd'")
   elif  key == '-s' :
     SSL_cert = val
-    if SSL_cert not in (".","-") and "/" not in SSL_Cert: raise BadCertificatePath
+    if SSL_cert not in (".","-") and "/" not in SSL_cert: raise BadCertificatePath
   elif  key == '-v' : ErrVerbose = True;
   elif  key == '-V' : OutVerbose = int(val)
   elif  key == '-x' : EXIT = True
@@ -352,7 +352,6 @@ def main():
       settings [ 'ssl_context' ] = ssl_context
 
     if METHOD == 'args':
-
       if AUTH == 'pam' : settings.update ( authentication_scheme = 'pam')
       if SSL_cert:       settings.update(  SSL_Options )
 
