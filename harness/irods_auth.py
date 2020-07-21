@@ -362,6 +362,9 @@ def main():
 
     with iRODSSession( **settings ) as session:
 
+      if ((METHOD,AUTH) == ('args','pam')) and SSL_cert:
+        print (' ',session.pam_pw_negotiated)
+
       home_coll = '/{0.zone}/home/{0.username}'.format(session)
       c = session.collections.get(home_coll)
 
