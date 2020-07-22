@@ -48,11 +48,11 @@ ses = iRODSSession(
 pam_hash = ses.pam_pw_negotiated
 
 if pam_hash: 
-    print pam_hash[0]
+    print (pam_hash[0])
     native_mode_encoded = irods.password_obfuscation.encode( pam_hash[0] )
-    open(out_filename,'wb').write(native_mode_encoded)
+    open(out_filename,'w').write(native_mode_encoded)
 
 coll_name = '/{ses.zone}/home/{ses.username}'.format(**locals())
 homecol = ses.collections.get(coll_name)
-print homecol
+print ( homecol )
 
